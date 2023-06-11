@@ -1,0 +1,8 @@
+[build_requires]
+catch2/3.3.2
+
+[requires]
+spdlog/1.11.0
+
+[generators]
+cmake_find_package
