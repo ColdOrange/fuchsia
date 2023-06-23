@@ -9,3 +9,5 @@ endfunction()
 
 fuchsia_add_test(test_epoll_context)
 fuchsia_add_test(test_buffer)
+fuchsia_add_test(test_address)
+fuchsia_add_test(test_endpoint)
