@@ -8,3 +8,4 @@ function(fuchsia_add_test name)
 endfunction()
 
 fuchsia_add_test(test_epoll_context)
+fuchsia_add_test(test_buffer)
