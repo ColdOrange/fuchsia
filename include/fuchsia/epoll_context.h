@@ -69,6 +69,18 @@ private:
         std::atomic<uint32_t> state = 0;
     };
 
+    template <typename Receiver, typename Protocol>
+    class SocketOperationBase;
+
+    template <typename Receiver, typename Protocol>
+    class SocketAcceptOperation;
+
+    template <typename Receiver, typename Protocol>
+    class SocketSendSomeOperation;
+
+    template <typename Receiver, typename Protocol>
+    class SocketRecvSomeOperation;
+
 private:
     void Schedule(OperationBase* op) noexcept;
     void ScheduleLocal(OperationBase* op) noexcept;

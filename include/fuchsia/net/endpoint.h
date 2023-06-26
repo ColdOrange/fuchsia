@@ -47,6 +47,14 @@ public:
         }
     }
 
+    explicit Endpoint(::sockaddr* addr) noexcept {
+        if (addr->sa_family == AF_INET) {
+            data_.v4 = *std::bit_cast<::sockaddr_in*>(addr);
+        } else if (addr->sa_family == AF_INET6) {
+            data_.v6 = *std::bit_cast<::sockaddr_in6*>(addr);
+        }
+    }
+
     Endpoint(const Endpoint& other) noexcept : data_(other.data_) {}
 
     Endpoint(Endpoint&& other) noexcept : data_(other.data_) {}

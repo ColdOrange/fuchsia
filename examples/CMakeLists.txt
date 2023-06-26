@@ -13,3 +13,4 @@ endfunction()
 
 fuchsia_add_example(hello)
 fuchsia_add_example(hello_coro)
+fuchsia_add_example(echo_server)

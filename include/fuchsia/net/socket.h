@@ -15,13 +15,19 @@ public:
     using ProtocolType = Protocol;
     using EndpointType = typename ProtocolType::Endpoint;
 
-    // Create a socket with non-blocking mode.
-    Socket(ContextType& context, ProtocolType protocol) noexcept : context_{context} {
+    // Default constructor.
+    Socket(ContextType& context) noexcept : context_{&context} {}
+
+    // Create a socket with native socket fd.
+    Socket(ContextType& context, int fd) noexcept : fd_{fd}, context_{&context} {}
+
+    // Create a socket and open with non-blocking mode.
+    Socket(ContextType& context, ProtocolType protocol) noexcept : context_{&context} {
         OpenNonBlocking(protocol);
     }
 
     // Create a socket and bind to the given endpoint.
-    Socket(ContextType& context, const EndpointType& endpoint) noexcept : context_{context} {
+    Socket(ContextType& context, const EndpointType& endpoint) noexcept : context_{&context} {
         OpenNonBlocking(endpoint.Protocol());
         Bind(endpoint);
     }
@@ -42,7 +48,7 @@ public:
 
     ~Socket() noexcept { Close(); }
 
-    ContextType& Context() const noexcept { return context_; }
+    ContextType& Context() const noexcept { return *context_; }
 
     int Fd() const noexcept { return fd_; }
 
@@ -58,16 +64,76 @@ public:
         }
     }
 
+    void SetReuseAddr() {
+        int optval = 1;
+        if (::setsockopt(fd_, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
+            throw std::system_error(errno, std::system_category(),
+                                    "setsockopt SO_REUSEADDR failed");
+        }
+    }
+
+    std::optional<std::pair<Socket, EndpointType>> Accept(std::error_code& ec) {
+        ::sockaddr_storage addr;
+        ::socklen_t len = sizeof(addr);
+
+        while (true) {
+            int conn_fd = ::accept4(fd_, reinterpret_cast<::sockaddr*>(&addr), &len, SOCK_NONBLOCK);
+            if (conn_fd >= 0) {
+                return std::make_pair(Socket{*context_, conn_fd},
+                                      EndpointType{reinterpret_cast<::sockaddr*>(&addr)});
+            }
+
+            if (errno == EINTR) {
+                continue;
+            }
+
+            ec = std::error_code(errno, std::system_category());
+            return std::nullopt;
+        }
+    }
+
+    std::optional<size_t> Send(const void* data, size_t size, std::error_code& ec) {
+        while (true) {
+            ssize_t n = ::send(fd_, data, size, 0);
+            if (n >= 0) {
+                return static_cast<size_t>(n);
+            }
+
+            if (errno == EINTR) {
+                continue;
+            }
+
+            ec = std::error_code(errno, std::system_category());
+            return std::nullopt;
+        }
+    }
+
+    std::optional<size_t> Recv(void* data, size_t size, std::error_code& ec) {
+        while (true) {
+            ssize_t n = ::recv(fd_, data, size, 0);
+            if (n > 0) {
+                return static_cast<size_t>(n);
+            } else if (n == 0) {  // connection closed by peer
+                ec = std::make_error_code(std::errc::connection_aborted);  // FIXME: error code
+                return std::nullopt;
+            }
+
+            if (errno == EINTR) {
+                continue;
+            }
+
+            ec = std::error_code(errno, std::system_category());
+            return std::nullopt;
+        }
+    }
+
     void Shutdown(int type) {
         if (::shutdown(fd_, type) < 0) {
             throw std::system_error(errno, std::system_category(), "shutdown socket failed");
         }
     }
 
-    void Close() noexcept {
-        if (fd_ < 0) {
-            throw std::runtime_error("invalid socket");
-        }
+    void Close() {
         ::close(fd_);
         fd_ = -1;
     }
@@ -76,7 +142,7 @@ public:
 
 private:
     void OpenNonBlocking(ProtocolType protocol) {
-        fd_ = ::socket(protocol.Family(), protocol.Yype() | SOCK_NONBLOCK, protocol.Protocol());
+        fd_ = ::socket(protocol.Family(), protocol.Type() | SOCK_NONBLOCK, protocol.Protocol());
         if (fd_ < 0) {
             throw std::system_error(errno, std::system_category(), "open socket failed");
         }
@@ -84,7 +150,7 @@ private:
 
 private:
     int fd_;
-    ContextType& context_;
+    ContextType* context_;
 };
 
 }  // namespace fuchsia::net

@@ -255,7 +255,9 @@ void EpollContext::BlockingWaitEvents() {
             Drain(wakeup_fd_);
             // Do nothing
         } else {
-            //
+            auto op = reinterpret_cast<OperationBase*>(events[i].data.ptr);
+            LOG_TRACE("event received for operation {}", op->uuid);
+            ScheduleLocal(op);
         }
     }
 }

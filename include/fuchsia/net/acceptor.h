@@ -13,9 +13,14 @@ class Acceptor : public Socket<Protocol> {
 public:
     using EndpointType = typename Protocol::Endpoint;
     using ContextType = typename Socket<Protocol>::ContextType;
+    using ProtocolType = Protocol;
 
-    Acceptor(ContextType& context, const EndpointType& endpoint) noexcept
-        : Socket<Protocol>{context, endpoint} {
+    Acceptor(ContextType& context, const EndpointType& endpoint, bool reuse_addr = true) noexcept
+        : Socket<Protocol>{context, endpoint.Protocol()} {
+        if (reuse_addr) {
+            Socket<Protocol>::SetReuseAddr();
+        }
+        Socket<Protocol>::Bind(endpoint);
         Socket<Protocol>::Listen();
     }
 
