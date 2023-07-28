@@ -131,6 +131,11 @@ class EpollContext::Scheduler {
                 execute = &Execute;
             }
 
+            // TODO: Why is this needed? stdexec::on method just won't compile if we do not
+            //  `explicitly` delete the move constructor. Took quite a while to figure this out.
+            Operation(Operation&&) = delete;
+            Operation(const Operation&) = delete;
+
             friend void tag_invoke(stdexec::start_t, Operation& op) noexcept { op.Start(); }
 
         private:
@@ -194,6 +199,9 @@ class EpollContext::Scheduler {
                   stop_callback_(stdexec::get_stop_token(stdexec::get_env(receiver_)), *this) {
                 // TODO: context stop callback
             }
+
+            Operation(Operation&&) = delete;
+            Operation(const Operation&) = delete;
 
             friend void tag_invoke(stdexec::start_t, Operation& op) noexcept { op.Start(); }
 

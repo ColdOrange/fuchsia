@@ -38,9 +38,9 @@ int main() {
     // clang-format off
     stdexec::sender auto task =
         fuchsia::AsyncAccept(acceptor)
-        | stdexec::then([&clients](auto&& _socket, auto&& peer) noexcept {
+        | stdexec::then([&clients](auto&& _socket) noexcept {
             uint32_t id = uuid();
-            spdlog::info("Client {} connected from {}", id, peer.ToString());
+            spdlog::info("Client {} connected: {}", id, _socket.Fd());
 
             clients[id].id = id;
             clients[id].socket = std::move(_socket);

@@ -39,8 +39,7 @@ private:
             stdexec::set_error(std::move(base->receiver_), base->ec_);
         } else {
             auto self = static_cast<SocketAcceptOperation*>(base);
-            stdexec::set_value(std::move(base->receiver_), std::move(self->conn_socket_),
-                               std::move(self->peer_endpoint_));
+            stdexec::set_value(std::move(base->receiver_), std::move(self->conn_socket_));
         }
     }
 
@@ -63,10 +62,9 @@ public:
     explicit SocketAcceptSender(AcceptorType& acceptor) noexcept : acceptor_(acceptor) {}
 
     using is_sender = void;
-    using completion_sigs =
-        stdexec::completion_signatures<stdexec::set_value_t(SocketType&&, EndpointType&&),
-                                       stdexec::set_error_t(std::error_code),
-                                       stdexec::set_stopped_t()>;
+    using completion_sigs = stdexec::completion_signatures<stdexec::set_value_t(SocketType&&),
+                                                           stdexec::set_error_t(std::error_code),
+                                                           stdexec::set_stopped_t()>;
 
     template <typename Env>
     friend completion_sigs tag_invoke(stdexec::get_completion_signatures_t,

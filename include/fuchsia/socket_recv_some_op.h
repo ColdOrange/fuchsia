@@ -49,14 +49,6 @@ private:
     size_t bytes_transferred_;
 };
 
-struct Env {
-    EpollContext* context;
-    friend EpollContext::Scheduler tag_invoke(
-        stdexec::get_completion_scheduler_t<stdexec::set_value_t>, const Env& env) noexcept {
-        return EpollContext::Scheduler(env.context);
-    }
-};
-
 template <typename Protocol>
 class SocketRecvSomeSender {
 public:
@@ -78,7 +70,8 @@ public:
         return {};
     }
 
-    friend Env tag_invoke(stdexec::get_env_t, const SocketRecvSomeSender& sender) noexcept {
+    friend stdexec::empty_env tag_invoke(stdexec::get_env_t,
+                                         const SocketRecvSomeSender& sender) noexcept {
         return {&sender.acceptor_.Context()};
     }
 
