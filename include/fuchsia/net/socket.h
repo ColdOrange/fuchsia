@@ -8,6 +8,8 @@
 
 namespace fuchsia::net {
 
+enum class ShutdownMode { Read = SHUT_RD, Write = SHUT_WR, Both = SHUT_RDWR };
+
 template <typename Protocol>
 class Socket {
 public:
@@ -127,8 +129,8 @@ public:
         }
     }
 
-    void Shutdown(int type) {
-        if (::shutdown(fd_, type) < 0) {
+    void Shutdown(ShutdownMode type) {
+        if (::shutdown(fd_, static_cast<int>(type)) < 0) {
             throw std::system_error(errno, std::system_category(), "shutdown socket failed");
         }
     }

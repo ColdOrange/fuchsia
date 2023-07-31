@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD 20)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_BINARY_DIR})
 
 find_package(spdlog REQUIRED)
+find_package(llhttp REQUIRED)
 
 # A simple way to add stdexec as dependency
 include_directories(thirdparty/stdexec/include)
@@ -24,6 +25,7 @@ target_include_directories(fuchsia PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 target_link_libraries(fuchsia PUBLIC spdlog::spdlog)
+target_link_libraries(fuchsia PUBLIC llhttp::llhttp)
 
 if (PROJECT_IS_TOP_LEVEL)
     option(FUCHSIA_BUILD_EXAMPLES "Build examples" ON)
