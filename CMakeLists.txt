@@ -11,7 +11,7 @@ find_package(spdlog REQUIRED)
 find_package(llhttp REQUIRED)
 
 # A simple way to add stdexec as dependency
-include_directories(thirdparty/stdexec/include)
+#include_directories(thirdparty/stdexec/include)
 
 file(GLOB_RECURSE FUCHSIA_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
@@ -23,6 +23,7 @@ add_library(fuchsia::fuchsia ALIAS fuchsia)
 
 target_include_directories(fuchsia PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/stdexec/include> # add stdexec as dependency
     $<INSTALL_INTERFACE:include>)
 target_link_libraries(fuchsia PUBLIC spdlog::spdlog)
 target_link_libraries(fuchsia PUBLIC llhttp::llhttp)
