@@ -26,11 +26,11 @@ public:
     Endpoint(ProtocolType protocol, PortType port) noexcept {
         if (protocol.Family() == AF_INET) {
             data_.v4.sin_family = AF_INET;
-            data_.v4.sin_port = ::htons(port);
+            data_.v4.sin_port = htons(port);
             data_.v4.sin_addr.s_addr = INADDR_ANY;
         } else {
             data_.v6.sin6_family = AF_INET6;
-            data_.v6.sin6_port = ::htons(port);
+            data_.v6.sin6_port = htons(port);
             data_.v6.sin6_addr = IN6ADDR_ANY_INIT;
         }
     }
@@ -38,11 +38,11 @@ public:
     Endpoint(const Address& addr, PortType port) noexcept {
         if (addr.IsV4()) {
             data_.v4.sin_family = AF_INET;
-            data_.v4.sin_port = ::htons(port);
+            data_.v4.sin_port = htons(port);
             data_.v4.sin_addr = std::bit_cast<in_addr>(addr.ToV4().ToBytes());
         } else if (addr.IsV6()) {
             data_.v6.sin6_family = AF_INET6;
-            data_.v6.sin6_port = ::htons(port);
+            data_.v6.sin6_port = htons(port);
             data_.v6.sin6_addr = std::bit_cast<in6_addr>(addr.ToV6().ToBytes());
         }
     }
@@ -89,9 +89,9 @@ public:
 
     PortType Port() const noexcept {
         if (IsV4()) {
-            return ::ntohs(data_.v4.sin_port);
+            return ntohs(data_.v4.sin_port);
         } else {
-            return ::ntohs(data_.v6.sin6_port);
+            return ntohs(data_.v6.sin6_port);
         }
     }
 
