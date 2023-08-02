@@ -5,13 +5,15 @@
 #include "fuchsia/http/server.h"
 #include "spdlog/spdlog.h"
 
-void HandleHello(const fuchsia::http::Request& req, fuchsia::http::Response& resp) {
+exec::task<void> HandleHello(const fuchsia::http::Request& req, fuchsia::http::Response& resp) {
     resp.WriteBody("Hello, world!");
+    co_return;
 }
 
-void HandleJson(const fuchsia::http::Request& req, fuchsia::http::Response& resp) {
+exec::task<void> HandleJson(const fuchsia::http::Request& req, fuchsia::http::Response& resp) {
     resp.AddHeader("Content-Type", "application/json");
     resp.WriteBody(R"({"hello": "world"})");
+    co_return;
 }
 
 int main() {

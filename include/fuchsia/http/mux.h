@@ -9,13 +9,14 @@
 #include <memory>
 #include <string>
 
+#include "exec/task.hpp"
 #include "fuchsia/http/message.h"
 
 namespace fuchsia::http {
 
 class ServeMux {
 public:
-    using Handler = std::function<void(const Request& req, Response& resp)>;
+    using Handler = std::function<exec::task<void>(const Request& req, Response& resp)>;
 
     ServeMux() = default;
     ~ServeMux() = default;

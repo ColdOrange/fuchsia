@@ -8,8 +8,7 @@
 
 namespace fuchsia::http {
 
-void ServeMux::HandleFunc(const std::string& pattern,
-                          std::function<void(const Request&, Response&)> handler) {
+void ServeMux::HandleFunc(const std::string& pattern, ServeMux::Handler handler) {
     if (handlers_.find(pattern) != handlers_.end()) {
         throw std::runtime_error("pattern already exists");
     }

@@ -22,20 +22,25 @@ exec::task<void> Session::AsyncRecvRequest() {
         auto result = request_.Parse(buffer_, size);
         if (result == ParseResult::Incomplete) {
             continue;
-        } else if (result == ParseResult::Error) {
-            response_.SetStatusCode(StatusCode::BadRequest);
-            co_return co_await AsyncSendResponse();
         } else {
-            LOG_TRACE("Session {} recv request: {} {}", id_, request_.Method(), request_.Url());
-            auto handler = mux_.Match(request_.Url());
-            if (handler == nullptr) {
-                response_.SetStatusCode(StatusCode::NotFound);
-            } else {
-                handler->operator()(request_, response_);
-            }
-            co_return co_await AsyncSendResponse();
+            co_return co_await AsyncHandleRequest(result);
         }
     }
+}
+
+exec::task<void> Session::AsyncHandleRequest(ParseResult parse_result) {
+    LOG_TRACE("Session {} recv request: {} {}", id_, request_.Method(), request_.Url());
+    if (parse_result == ParseResult::Error) {
+        response_.SetStatusCode(StatusCode::BadRequest);
+    } else {
+        auto handler = mux_.Match(request_.Url());
+        if (handler == nullptr) {
+            response_.SetStatusCode(StatusCode::NotFound);
+        } else {
+            co_await handler->operator()(request_, response_);
+        }
+    }
+    co_return co_await AsyncSendResponse();
 }
 
 static std::string BuildHeader(Response& response) {

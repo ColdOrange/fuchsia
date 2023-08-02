@@ -28,6 +28,7 @@ public:
 
 private:
     exec::task<void> AsyncRecvRequest();
+    exec::task<void> AsyncHandleRequest(ParseResult parse_result);
     exec::task<void> AsyncSendResponse();
 
     static uint64_t GenID();
