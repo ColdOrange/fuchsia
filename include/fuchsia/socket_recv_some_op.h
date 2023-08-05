@@ -72,7 +72,7 @@ public:
 
     friend stdexec::empty_env tag_invoke(stdexec::get_env_t,
                                          const SocketRecvSomeSender& sender) noexcept {
-        return {&sender.acceptor_.Context()};
+        return {};
     }
 
     template <stdexec::__decays_to<SocketRecvSomeSender> Sender,
