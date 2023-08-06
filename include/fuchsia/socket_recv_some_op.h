@@ -4,32 +4,43 @@
 
 #pragma once
 
-#include "fuchsia/buffer.h"
+#include "fuchsia/buffer_sequence_adapter.h"
 #include "fuchsia/epoll_context.h"
 #include "fuchsia/net/socket.h"
 #include "fuchsia/socket_op_base.h"
 
 namespace fuchsia {
 
-template <typename Receiver, typename Protocol>
+template <typename Receiver, typename Protocol, typename Buffers>
 class EpollContext::SocketRecvSomeOperation : public SocketOperationBase<Receiver, Protocol> {
 public:
     using SocketType = typename Protocol::Socket;
     using BaseType = SocketOperationBase<Receiver, Protocol>;
+    using BuffersType = BufferSequenceAdapter<MutableBuffer, Buffers>;
 
-    SocketRecvSomeOperation(Receiver receiver, SocketType& socket, MutableBuffer buffer)
+    SocketRecvSomeOperation(Receiver receiver, SocketType& socket, Buffers buffers)
         : BaseType(std::move(receiver), socket, vtable_, BaseType::OperationType::Read),
-          buffer_(buffer),
+          buffers_(buffers),
           bytes_transferred_(0) {}
 
 private:
     static void Start(BaseType* base) noexcept {
         auto self = static_cast<SocketRecvSomeOperation*>(base);
-        auto res = self->socket_.Recv(self->buffer_.Data(), self->buffer_.Size(), base->ec_);
-        if (!res.has_value()) {
-            return;
+        if constexpr (BuffersType::IsSingleBuffer) {
+            auto&& single_buffer = BuffersType::First(self->buffers_);
+            auto res = self->socket_.Recv(single_buffer.Data(), single_buffer.Size(), base->ec_);
+            if (!res.has_value()) {
+                return;
+            }
+            self->bytes_transferred_ += res.value();
+        } else {
+            BuffersType buffers(self->buffers_);
+            auto res = self->socket_.RecvMsg(buffers.Buffers(), buffers.Count(), base->ec_);
+            if (!res.has_value()) {
+                return;
+            }
+            self->bytes_transferred_ += res.value();
         }
-        self->bytes_transferred_ += res.value();
     }
 
     static void Complete(BaseType* base) noexcept {
@@ -45,19 +56,19 @@ private:
 
     static constexpr typename BaseType::Vtable vtable_{&Start, &Complete};
 
-    MutableBuffer buffer_;
+    Buffers buffers_;
     size_t bytes_transferred_;
 };
 
-template <typename Protocol>
+template <typename Protocol, typename Buffers>
 class SocketRecvSomeSender {
 public:
     template <typename Receiver>
-    using OperationType = EpollContext::SocketRecvSomeOperation<Receiver, Protocol>;
+    using OperationType = EpollContext::SocketRecvSomeOperation<Receiver, Protocol, Buffers>;
     using SocketType = typename Protocol::Socket;
 
-    explicit SocketRecvSomeSender(SocketType& socket, MutableBuffer buffer) noexcept
-        : socket_(socket), buffer_(buffer) {}
+    SocketRecvSomeSender(SocketType& socket, Buffers buffers) noexcept
+        : socket_(socket), buffers_(buffers) {}
 
     using is_sender = void;
     using completion_sigs = stdexec::completion_signatures<stdexec::set_value_t(size_t),
@@ -80,21 +91,21 @@ public:
     friend OperationType<std::remove_cvref_t<Receiver>> tag_invoke(stdexec::connect_t,
                                                                    Sender&& sender,
                                                                    Receiver receiver) noexcept {
-        return {std::move(receiver), sender.socket_, sender.buffer_};
+        return {std::move(receiver), sender.socket_, sender.buffers_};
     }
 
 private:
     SocketType& socket_;
-    MutableBuffer buffer_;
+    Buffers buffers_;
 };
 
 namespace cpo {
 
 struct AsyncRecvSome {
-    template <typename Protocol>
-    constexpr auto operator()(net::Socket<Protocol>& socket, MutableBuffer buffer) const noexcept
-        -> SocketRecvSomeSender<Protocol> {
-        return SocketRecvSomeSender<Protocol>{socket, buffer};
+    template <typename Protocol, MutableBufferSequence Buffers>
+    constexpr auto operator()(net::Socket<Protocol>& socket, Buffers buffers) const noexcept
+        -> SocketRecvSomeSender<Protocol, Buffers> {
+        return {socket, buffers};
     }
 };
 

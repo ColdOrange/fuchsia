@@ -62,14 +62,13 @@ static std::string BuildHeader(Response& response) {
 }
 
 exec::task<void> Session::AsyncSendResponse() {
-    // TODO: AsyncSendSome support multiple buffers
     const auto& header = BuildHeader(response_);
     LOG_TRACE("Session {} send response: {}{}", id_, header, response_.Body());
-    co_await fuchsia::AsyncSendSome(socket_, fuchsia::Buffer(header.data(), header.size()));
-    if (!response_.Body().empty()) {
-        co_await fuchsia::AsyncSendSome(
-            socket_, fuchsia::Buffer(response_.Body().data(), response_.Body().size()));
-    }
+    std::vector<fuchsia::ConstBuffer> buffers{
+        fuchsia::ConstBuffer(header.data(), header.size()),
+        fuchsia::ConstBuffer(response_.Body().data(), response_.Body().size()),
+    };
+    co_await fuchsia::AsyncSendSome(socket_, buffers);
     socket_.Shutdown(fuchsia::net::ShutdownMode::Both);
     session_mgr_.Stop(shared_from_this());
 }

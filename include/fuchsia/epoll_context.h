@@ -75,10 +75,10 @@ private:
     template <typename Receiver, typename Protocol>
     class SocketAcceptOperation;
 
-    template <typename Receiver, typename Protocol>
+    template <typename Receiver, typename Protocol, typename Buffers>
     class SocketSendSomeOperation;
 
-    template <typename Receiver, typename Protocol>
+    template <typename Receiver, typename Protocol, typename Buffers>
     class SocketRecvSomeOperation;
 
 private:

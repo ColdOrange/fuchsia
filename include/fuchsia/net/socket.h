@@ -129,6 +129,43 @@ public:
         }
     }
 
+    std::optional<size_t> SendMsg(iovec* bufs, uint64_t count, std::error_code& ec) {
+        msghdr msg{.msg_iov = bufs, .msg_iovlen = count};
+        while (true) {
+            ssize_t n = ::sendmsg(fd_, &msg, 0);
+            if (n >= 0) {
+                return static_cast<size_t>(n);
+            }
+
+            if (errno == EINTR) {
+                continue;
+            }
+
+            ec = std::error_code(errno, std::system_category());
+            return std::nullopt;
+        }
+    }
+
+    std::optional<size_t> RecvMsg(iovec* bufs, uint64_t count, std::error_code& ec) {
+        msghdr msg{.msg_iov = bufs, .msg_iovlen = count};
+        while (true) {
+            ssize_t n = ::recvmsg(fd_, &msg, 0);
+            if (n > 0) {
+                return static_cast<size_t>(n);
+            } else if (n == 0) {  // connection closed by peer
+                ec = std::make_error_code(std::errc::connection_aborted);  // FIXME: error code
+                return std::nullopt;
+            }
+
+            if (errno == EINTR) {
+                continue;
+            }
+
+            ec = std::error_code(errno, std::system_category());
+            return std::nullopt;
+        }
+    }
+
     void Shutdown(ShutdownMode type) {
         if (::shutdown(fd_, static_cast<int>(type)) < 0) {
             throw std::system_error(errno, std::system_category(), "shutdown socket failed");

@@ -253,7 +253,7 @@ template <typename T>
 concept ConstBufferSequence = requires(const T& t) {
     BufferSequenceBegin(t);
     BufferSequenceEnd(t);
-    requires std::convertible_to<decltype(*gBufferSequenceBegin(t)), ConstBuffer>;
+    requires std::convertible_to<decltype(*BufferSequenceBegin(t)), ConstBuffer>;
 };
 
 }  // namespace fuchsia
