@@ -46,33 +46,9 @@ exec::task<void> Session::AsyncHandleRequest(ParseResult parse_result) {
     }
 }
 
-static std::string BuildHeader(Response& response) {
-    if (!response.Body().empty()) {
-        response.AddHeader("Content-Length", std::to_string(response.Body().size()));
-        if (response.Header("Content-Type").empty()) {
-            response.AddHeader("Content-Type", "text/plain");
-        }
-    }
-
-    std::stringstream ss;
-    ss << "HTTP/1.1 " << static_cast<int>(response.StatusCode()) << " "
-       << StatusCodeToString(response.StatusCode()) << "\r\n";
-    for (const auto& header : response.Headers()) {
-        ss << header.key << ": " << header.value << "\r\n";
-    }
-    ss << "Connection: " << (response.KeepAlive() ? "keep-alive" : "close") << "\r\n";
-    ss << "\r\n";
-    return ss.str();
-}
-
 exec::task<bool> Session::AsyncSendResponse() {
-    const auto& header = BuildHeader(response_);
-    LOG_TRACE("Session {} send response: {}{}", id_, header, response_.Body());
-    std::vector<fuchsia::ConstBuffer> buffers{
-        fuchsia::ConstBuffer(header.data(), header.size()),
-        fuchsia::ConstBuffer(response_.Body().data(), response_.Body().size()),
-    };
-    co_await fuchsia::AsyncSendSome(socket_, buffers);
+    LOG_TRACE("Session {} send response: {}", id_, response_.StatusCode());
+    co_await fuchsia::AsyncSendSome(socket_, response_.ToBuffers());
     if (response_.KeepAlive()) {
         request_.Reset();
         response_.Reset();
