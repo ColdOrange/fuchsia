@@ -29,7 +29,7 @@ public:
 private:
     exec::task<void> AsyncRecvRequest();
     exec::task<void> AsyncHandleRequest(ParseResult parse_result);
-    exec::task<void> AsyncSendResponse();
+    exec::task<bool> AsyncSendResponse();  // shutdown or not
 
     static uint64_t GenID();
 

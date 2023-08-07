@@ -22,8 +22,12 @@ exec::task<void> Session::AsyncRecvRequest() {
         auto result = request_.Parse(buffer_, size);
         if (result == ParseResult::Incomplete) {
             continue;
-        } else {
-            co_return co_await AsyncHandleRequest(result);
+        }
+
+        co_await AsyncHandleRequest(result);
+        bool shutdown = co_await AsyncSendResponse();
+        if (shutdown) {
+            break;
         }
     }
 }
@@ -40,7 +44,6 @@ exec::task<void> Session::AsyncHandleRequest(ParseResult parse_result) {
             co_await handler->operator()(request_, response_);
         }
     }
-    co_return co_await AsyncSendResponse();
 }
 
 static std::string BuildHeader(Response& response) {
@@ -57,11 +60,12 @@ static std::string BuildHeader(Response& response) {
     for (const auto& header : response.Headers()) {
         ss << header.key << ": " << header.value << "\r\n";
     }
+    ss << "Connection: " << (response.KeepAlive() ? "keep-alive" : "close") << "\r\n";
     ss << "\r\n";
     return ss.str();
 }
 
-exec::task<void> Session::AsyncSendResponse() {
+exec::task<bool> Session::AsyncSendResponse() {
     const auto& header = BuildHeader(response_);
     LOG_TRACE("Session {} send response: {}{}", id_, header, response_.Body());
     std::vector<fuchsia::ConstBuffer> buffers{
@@ -69,8 +73,15 @@ exec::task<void> Session::AsyncSendResponse() {
         fuchsia::ConstBuffer(response_.Body().data(), response_.Body().size()),
     };
     co_await fuchsia::AsyncSendSome(socket_, buffers);
-    socket_.Shutdown(fuchsia::net::ShutdownMode::Both);
-    session_mgr_.Stop(shared_from_this());
+    if (response_.KeepAlive()) {
+        request_.Reset();
+        response_.Reset();
+        co_return false;
+    } else {
+        socket_.Shutdown(fuchsia::net::ShutdownMode::Both);
+        session_mgr_.Stop(shared_from_this());
+        co_return true;
+    }
 }
 
 uint64_t Session::GenID() {

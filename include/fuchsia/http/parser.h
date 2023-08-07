@@ -28,6 +28,17 @@ public:
         parser_.data = this;
     }
 
+    virtual void Reset() {
+        llhttp_reset(&parser_);
+        state_ = ParserState::None;
+        method_.clear();
+        url_.clear();
+        status_code_ = fuchsia::http::StatusCode::Ok;
+        header_field_.clear();
+        headers_.clear();
+        body_.clear();
+    }
+
     ParseResult Parse(const char* data, size_t len) {
         auto ret = llhttp_execute(&parser_, data, len);
         if (ret != HPE_OK) {

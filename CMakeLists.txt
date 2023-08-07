@@ -4,6 +4,12 @@ project(fuchsia)
 
 set(CMAKE_CXX_STANDARD 20)
 
+set(DEFAULT_CMAKE_BUILD_TYPE "Debug")
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "No build type selected, default to ${DEFAULT_CMAKE_BUILD_TYPE}")
+    set(CMAKE_BUILD_TYPE "${DEFAULT_CMAKE_BUILD_TYPE}" CACHE STRING "Build type (default ${DEFAULT_CMAKE_BUILD_TYPE})" FORCE)
+endif ()
+
 # Add conan generated cmake files
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_BINARY_DIR})
 

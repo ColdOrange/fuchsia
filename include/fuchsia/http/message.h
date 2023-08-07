@@ -33,13 +33,24 @@ public:
 
     Response() = default;
 
+    void Reset() override {
+        Parser::Reset();
+        keep_alive_ = false;
+    }
+
     void SetStatusCode(fuchsia::http::StatusCode status_code) { status_code_ = status_code; }
+
+    bool KeepAlive() const { return keep_alive_; }
+    void SetKeepAlive(bool on) { keep_alive_ = on; }
 
     void AddHeader(const std::string& key, const std::string& value) {
         headers_.push_back({key, value});
     }
 
     void WriteBody(std::string_view data) { body_.append(data); }
+
+private:
+    bool keep_alive_{false};
 };
 
 }  // namespace fuchsia::http
