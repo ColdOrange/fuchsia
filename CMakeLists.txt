@@ -18,7 +18,7 @@ file(GLOB_RECURSE FUCHSIA_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
     )
 
-add_library(fuchsia STATIC ${FUCHSIA_SRCS})
+add_library(fuchsia SHARED ${FUCHSIA_SRCS}) # STATIC won't compile because of a possible linker bug reported in stdexec: https://github.com/NVIDIA/stdexec/pull/993
 add_library(fuchsia::fuchsia ALIAS fuchsia)
 
 target_include_directories(fuchsia PUBLIC
