@@ -12,11 +12,7 @@
 
 namespace fuchsia::http {
 
-exec::task<void> Session::Start() { co_await AsyncRecvRequest(); }
-
-void Session::Stop() { socket_.Close(); }
-
-exec::task<void> Session::AsyncRecvRequest() {
+exec::task<void> Session::Start() {
     while (true) {
         auto size = co_await fuchsia::AsyncRecvSome(socket_, fuchsia::Buffer(buffer_));
         auto result = request_.Parse(buffer_, size);
@@ -24,41 +20,32 @@ exec::task<void> Session::AsyncRecvRequest() {
             continue;
         }
 
-        co_await AsyncHandleRequest(result);
-        bool shutdown = co_await AsyncSendResponse();
-        if (shutdown) {
+        LOG_TRACE("Session {} recv request: {} {}", id_, request_.Method(), request_.Url());
+        if (result == ParseResult::Error) {
+            response_.SetStatusCode(StatusCode::BadRequest);
+        } else {  // ParseResult::Ok
+            auto handler = mux_.Match(request_.Url());
+            if (handler == nullptr) {
+                response_.SetStatusCode(StatusCode::NotFound);
+            } else {
+                co_await handler->operator()(request_, response_);
+            }
+        }
+
+        LOG_TRACE("Session {} send response: {}", id_, response_.StatusCode());
+        co_await fuchsia::AsyncSendSome(socket_, response_.ToBuffers());
+        if (response_.KeepAlive()) {
+            request_.Reset();
+            response_.Reset();
+        } else {
+            socket_.Shutdown(fuchsia::net::ShutdownMode::Both);
+            session_mgr_.Stop(shared_from_this());
             break;
         }
     }
 }
 
-exec::task<void> Session::AsyncHandleRequest(ParseResult parse_result) {
-    LOG_TRACE("Session {} recv request: {} {}", id_, request_.Method(), request_.Url());
-    if (parse_result == ParseResult::Error) {
-        response_.SetStatusCode(StatusCode::BadRequest);
-    } else {
-        auto handler = mux_.Match(request_.Url());
-        if (handler == nullptr) {
-            response_.SetStatusCode(StatusCode::NotFound);
-        } else {
-            co_await handler->operator()(request_, response_);
-        }
-    }
-}
-
-exec::task<bool> Session::AsyncSendResponse() {
-    LOG_TRACE("Session {} send response: {}", id_, response_.StatusCode());
-    co_await fuchsia::AsyncSendSome(socket_, response_.ToBuffers());
-    if (response_.KeepAlive()) {
-        request_.Reset();
-        response_.Reset();
-        co_return false;
-    } else {
-        socket_.Shutdown(fuchsia::net::ShutdownMode::Both);
-        session_mgr_.Stop(shared_from_this());
-        co_return true;
-    }
-}
+void Session::Stop() { socket_.Close(); }
 
 uint64_t Session::GenID() {
     static uint64_t id = 0;
