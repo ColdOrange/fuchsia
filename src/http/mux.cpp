@@ -15,9 +15,12 @@ void ServeMux::HandleFunc(const std::string& pattern, ServeMux::Handler handler)
     handlers_[pattern] = std::move(handler);
 }
 
-const ServeMux::Handler* ServeMux::Match(const std::string& pattern) const {
+const ServeMux::Handler* ServeMux::Match(const std::string& path) const {
     for (const auto& [p, handler] : handlers_) {
-        if (p == pattern) {
+        if (p == path) {
+            return &handler;
+        }
+        if (p.back() == '/' && path.size() > p.size() && path.substr(0, p.size()) == p) {
             return &handler;
         }
     }

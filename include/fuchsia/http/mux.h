@@ -23,7 +23,7 @@ public:
 
     void HandleFunc(const std::string& pattern, Handler handler);
 
-    const Handler* Match(const std::string& pattern) const;
+    const Handler* Match(const std::string& path) const;
 
 private:
     std::map<std::string, Handler> handlers_;
